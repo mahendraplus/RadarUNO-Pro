@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Max - Project - UnoRadar</title>
+<style>
+  :root{
+    --bg:#060b04;
+    --panel:#071009;
+    --accent:#00ff88;
+    --accent-dim:rgba(0,255,136,0.35);
+    --danger:#ff3b3b;
+    --glass: rgba(255,255,255,0.02);
+    --glass-2: rgba(0,0,0,0.4);
+    --muted: rgba(0,255,136,0.16);
+    --font: 'Consolas', 'Courier New', monospace;
+  }
+  html,body{height:100%;margin:0;background:radial-gradient(circle at 30% 10%, #021203 0%, var(--bg) 50%); color:var(--accent); font-family:var(--font); -webkit-font-smoothing:antialiased;}
+  .app{display:flex;flex-direction:row;height:100vh;gap:18px;padding:18px;box-sizing:border-box;}
+  /* Left panel */
+  .left {
+    width:360px;
+    min-width:260px;
+    background:linear-gradient(180deg,var(--panel), #041006 90%);
+    border:1px solid rgba(0,255,136,0.08);
+    border-radius:12px;
+    padding:14px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .title{display:flex;align-items:center;gap:10px;}
+  .badge{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#00220e,#003a16);display:flex;align-items:center;justify-content:center;border:1px solid var(--accent-dim);box-shadow:0 6px 18px rgba(0,0,0,0.6);font-weight:700;}
+  h1{margin:0;font-size:16px;color:var(--accent);}
+  p.sub{margin:0;color:rgba(0,255,136,0.55);font-size:12px;}
+  .group{background:var(--glass);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;border:1px solid rgba(0,255,136,0.04);}
+  label.small{font-size:12px;color:rgba(0,255,136,0.7);}
+  select, button, input[type=range]{
+    background:transparent;border:1px solid rgba(0,255,136,0.12);color:var(--accent);padding:8px;border-radius:6px;font-family:var(--font);
+  }
+  .row{display:flex;gap:8px;align-items:center;}
+  button.primary{background: linear-gradient(180deg,#002a10,#00401a); border:1px solid rgba(0,255,136,0.18); padding:10px 12px; cursor:pointer;}
+  button.ghost{background:transparent;border:1px dashed rgba(0,255,136,0.06);padding:8px 10px;cursor:pointer;}
+  .toggles{display:flex;flex-direction:column;gap:6px;}
+  .toggle{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:6px;background:var(--glass-2);border:1px solid rgba(0,255,136,0.03);}
+  .toggle input[type=checkbox]{transform:scale(1.2);margin-right:8px;}
+  .small-muted{font-size:12px;color:rgba(0,255,136,0.5);}
+  .slider-row{display:flex;flex-direction:column;gap:6px;}
+  .progress-bar{height:10px;background:rgba(255,255,255,0.03);border-radius:6px;overflow:hidden;border:1px solid rgba(0,255,136,0.04);}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#00b36b);width:30%;}
+  .controls-bottom{display:flex;gap:8px;align-items:center;justify-content:space-between;}
+  .muted-note{font-size:12px;color:rgba(0,255,136,0.45);}
+
+  /* Right panel - big canvas */
+  .right{flex:1; position:relative; border-radius:12px; overflow:hidden; box-shadow:0 10px 60px rgba(0,0,0,0.6); border:1px solid rgba(0,255,136,0.04);}
+  canvas{width:100%;height:100%;display:block;background:radial-gradient(circle at 30% 5%, rgba(0,255,136,0.02), transparent 8%), linear-gradient(180deg, rgba(0,0,0,0.05), transparent);}
+
+  /* top overlay on canvas */
+  .overlay-top{position:absolute;top:12px;left:12px;color:var(--accent);font-size:13px;display:flex;gap:12px;align-items:center;}
+  .stat{background:rgba(0,0,0,0.45);padding:8px 10px;border-radius:8px;border:1px solid rgba(0,255,136,0.06);}
+  .bottom-bar{position:absolute;bottom:12px;left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .panel-mini{background:rgba(0,0,0,0.45);padding:8px 10px;border-radius:8px;border:1px solid rgba(0,255,136,0.06);font-size:13px;}
+  .btn-small{padding:6px 10px;background:transparent;border:1px solid rgba(0,255,136,0.08);border-radius:6px;cursor:pointer;color:var(--accent);}
+
+  /* responsive */
+  @media (max-width:900px){
+    .app{flex-direction:column;padding:10px;}
+    .left{width:100%;min-width:unset;order:2;}
+    .right{order:1;height:60vh;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="left">
+    <div class="title">
+      <div class="badge">MAX</div>
+      <div>
+        <h1>UnoRadar</h1>
+        <p class="sub">Created By Mahendra Mali - Max</p>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="small">Serial Port</label>
+      <div class="row">
+        <select id="portList"><option>— No ports —</option></select>
+        <button id="requestPort" class="primary">Request Port</button>
+      </div>
+      <div class="row">
+        <button id="btnConnect" class="primary">Connect</button>
+        <button id="btnDisconnect" class="ghost">Disconnect</button>
+      </div>
+      <div class="row">
+        <span class="small-muted">Status:</span><span id="status" class="muted-note">Disconnected</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="small">Display & Detection</label>
+      <div class="slider-row">
+        <div class="row">
+          <label class="small">Max Range: <span id="lblRange">150</span> cm</label>
+        </div>
+        <input id="range" type="range" min="50" max="400" step="5" value="150">
+        <div class="row">
+          <label class="small">Sensitivity (cm): <span id="lblSens">5</span></label>
+          <input id="sensitivity" type="range" min="1" max="30" value="5">
+        </div>
+        <div class="row">
+          <label class="small">Hold (seconds): <span id="lblHold">5</span></label>
+          <input id="hold" type="range" min="1" max="20" value="5">
+        </div>
+        <div class="row">
+          <label class="small">Sweep Mode:</label>
+          <select id="sweepMode">
+            <option value="real">Real-time (Hardware)</option>
+            <option value="simulated">Simulated</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="small">Toggles</label>
+      <div class="toggles">
+        <div class="toggle"><span>Show Dots</span><input id="togDots" type="checkbox" checked></div>
+        <div class="toggle"><span>Show Labels</span><input id="togLabels" type="checkbox" checked></div>
+        <div class="toggle"><span>Show Trail</span><input id="togTrail" type="checkbox" checked></div>
+        <div class="toggle"><span>Beep on Motion</span><input id="togSound" type="checkbox"></div>
+        <div class="toggle"><span>Auto Lock Closest</span><input id="togLock" type="checkbox" checked></div>
+        <div class="toggle"><span>Show Sweep Direction</span><input id="togSweepDir" type="checkbox" checked></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="small">Quick Controls</label>
+      <div class="row">
+        <button id="btnPause" class="btn-small">Pause</button>
+        <button id="btnClear" class="btn-small">Clear</button>
+        <button id="btnSave" class="btn-small">Save Log</button>
+        <button id="btnFS" class="btn-small">Fullscreen</button>
+      </div>
+      <div style="margin-top:8px;">
+        <div class="small-muted">Signal</div>
+        <div class="progress-bar"><div id="sigFill" class="progress-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="small">Log (latest)</label>
+      <div id="logBox" style="height:120px;overflow:auto;background:rgba(0,0,0,0.25);padding:8px;border-radius:6px;border:1px solid rgba(0,255,136,0.03);font-size:12px;"></div>
+    </div>
+
+  </div>
+
+  <div class="right">
+    <canvas id="radarCanvas"></canvas>
+
+    <div class="overlay-top">
+      <div class="stat">Angle: <span id="uiAngle">0</span>°</div>
+      <div class="stat">Distance: <span id="uiDist">0</span> cm</div>
+      <div class="stat">Detections: <span id="uiCount">0</span></div>
+      <div class="stat">Sweep: <span id="uiSweepDir">→</span></div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="panel-mini" id="lockInfo">LOCK: —</div>
+      <div style="display:flex;gap:8px;">
+        <div class="panel-mini">Range: <span id="uiRange">150</span> cm</div>
+        <div class="panel-mini">Sensitivity: <span id="uiSens">5</span> cm</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+
+/* ----------------------- Utilities ----------------------- */
+const el = id => document.getElementById(id);
+const now = () => performance.now();
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* ----------------------- State ----------------------- */
+let port = null;
+let reader = null;
+let keepReading = false;
+let isConnected = false;
+let paused = false;
+
+let detections = []; // {angle,dist,ts,motion}
+let logs = []; // strings for CSV
+let lastDist = new Array(181).fill(-1);
+
+// Sweep state tracking
+let sweepAngle = 0; // degrees
+let sweepDirection = 1; // 1 for right, -1 for left
+let lastSweepAngle = 0;
+let lastAngleUpdate = 0;
+let sweepMode = 'real'; // 'real' or 'simulated'
+
+let cfg = {
+  maxRange: parseFloat(el('range').value),
+  sensitivity: parseFloat(el('sensitivity').value),
+  holdMs: parseFloat(el('hold').value) * 1000,
+  showDots: el('togDots').checked,
+  showLabels: el('togLabels').checked,
+  showTrail: el('togTrail').checked,
+  sound: el('togSound').checked,
+  autoLock: el('togLock').checked,
+  showSweepDir: el('togSweepDir').checked
+};
+
+el('lblRange').innerText = cfg.maxRange;
+el('lblSens').innerText = cfg.sensitivity;
+el('lblHold').innerText = Math.round(cfg.holdMs/1000);
+el('uiRange').innerText = cfg.maxRange;
+el('uiSens').innerText = cfg.sensitivity;
+
+/* ----------------------- Serial Port Helpers ----------------------- */
+async function listSavedPorts() {
+  if (!('serial' in navigator)) return;
+  try {
+    const ports = await navigator.serial.getPorts();
+    const select = el('portList');
+    select.innerHTML = '';
+    if (ports.length === 0) {
+      select.innerHTML = '<option value="">— No saved ports —</option>';
+    } else {
+      ports.forEach((p,i)=> {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = p.getInfo ? `Port ${i+1}` : `Port ${i+1}`;
+        select.appendChild(opt);
+      });
+    }
+  } catch(e){ console.warn('listSavedPorts:', e); }
+}
+
+async function requestPort() {
+  if (!('serial' in navigator)) { alert('Web Serial API not supported. Use Chrome/Edge.'); return; }
+  try {
+    const p = await navigator.serial.requestPort();
+    await listSavedPorts();
+    // try to auto-select last option
+    el('status').innerText = 'Port requested. Click Connect.';
+  } catch (e) {
+    console.warn('requestPort:', e);
+  }
+}
+
+async function connectToSelected() {
+  if (!('serial' in navigator)) { alert('Web Serial API not supported. Use Chrome/Edge.'); return; }
+  try {
+    // allow user to choose port if none selected
+    let selectedIndex = el('portList').selectedIndex;
+    if (selectedIndex <= 0) {
+      // if nothing in list, prompt user
+      port = await navigator.serial.requestPort();
+    } else {
+      const ports = await navigator.serial.getPorts();
+      port = ports[selectedIndex];
+    }
+    await port.open({ baudRate: 9600 });
+    isConnected = true;
+    el('status').innerText = 'Connected';
+    startReading();
+  } catch (e) {
+    console.error('connect error', e);
+    el('status').innerText = 'Connect failed: ' + (e.message || e);
+  }
+}
+
+async function disconnectPort() {
+  keepReading = false;
+  try { if (reader) await reader.cancel(); } catch(e){}
+  try { if (port && port.readable) await port.close(); } catch(e){}
+  port = null; reader = null; isConnected = false; el('status').innerText = 'Disconnected';
+}
+
+/* ----------------------- Reading Loop ----------------------- */
+async function startReading(){
+  keepReading = true;
+  const textDecoder = new TextDecoderStream();
+  const writableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+  reader = textDecoder.readable.getReader();
+
+  try {
+    while (keepReading) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      // support lines in batch
+      const lines = value.split(/\r?\n/);
+      for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+        parseSerialLine(line);
+      }
+    }
+  } catch (err) {
+    console.warn('read loop err', err);
+    el('status').innerText = 'Read error';
+  } finally {
+    try { reader.releaseLock(); } catch(e){}
+  }
+}
+
+function parseSerialLine(line) {
+  // Expect "angle,dist" like "45,120"
+  const parts = line.split(',').map(p=>p.trim());
+  if (parts.length < 2) return;
+  const a = parseFloat(parts[0]);
+  const d = parseFloat(parts[1]);
+  if (isNaN(a) || isNaN(d)) return;
+
+  // clamp angle and distance
+  const angle = clamp(a, 0, 180);
+  const dist = clamp(d, 0, 1000);
+
+  // Update sweep angle based on actual hardware position
+  if (sweepMode === 'real') {
+    // Detect sweep direction based on angle change
+    if (lastAngleUpdate > 0) {
+      const angleDiff = angle - lastSweepAngle;
+      
+      // Handle angle wrap-around at boundaries
+      if (Math.abs(angleDiff) > 90) {
+        // Likely wrap-around, determine direction based on which boundary
+        if (lastSweepAngle > 135 && angle < 45) {
+          sweepDirection = 1; // Moving right (0-180)
+        } else if (lastSweepAngle < 45 && angle > 135) {
+          sweepDirection = -1; // Moving left (180-0)
+        }
+      } else {
+        // Normal movement, determine direction
+        if (angleDiff > 0) {
+          sweepDirection = 1; // Moving right
+        } else if (angleDiff < 0) {
+          sweepDirection = -1; // Moving left
+        }
+      }
+    }
+    
+    lastSweepAngle = sweepAngle;
+    sweepAngle = angle;
+    lastAngleUpdate = Date.now();
+    
+    // Update sweep direction indicator
+    el('uiSweepDir').textContent = sweepDirection > 0 ? '→' : '←';
+  }
+
+  // update UI values
+  el('uiAngle').innerText = angle.toFixed(1);
+  el('uiDist').innerText = dist.toFixed(1);
+
+  // if paused do nothing besides showing current values
+  if (paused) return;
+
+  // motion detection
+  const idx = Math.round(angle);
+  let motion = false;
+  if (lastDist[idx] > 0 && Math.abs(dist - lastDist[idx]) >= cfg.sensitivity && dist <= cfg.maxRange) motion = true;
+  lastDist[idx] = dist;
+
+  if (dist <= cfg.maxRange) {
+    const det = { angle, dist, ts: Date.now(), motion };
+    detections.push(det);
+    logs.push(`${Date.now()},${angle.toFixed(1)},${dist.toFixed(2)},${motion?1:0}`);
+    // beep
+    if (motion && cfg.sound) beepOnce();
+    // pop short log into UI
+    pushLog(`${new Date().toLocaleTimeString()}  A:${angle.toFixed(1)} D:${dist.toFixed(1)}${motion?' *MOTION*':''}`);
+  }
+
+  // compute signal fill (approx)
+  const recent = detections.slice(-30);
+  const avg = recent.length ? recent.reduce((s,x)=>s+x.dist,0)/recent.length : 0;
+  const perc = clamp( (1 - (avg/cfg.maxRange)) * 100, 0, 100 );
+  el('sigFill').style.width = perc + '%';
+  el('uiCount').innerText = detections.length;
+}
+
+/* ----------------------- UI Helpers ----------------------- */
+function pushLog(text) {
+  const box = el('logBox');
+  const p = document.createElement('div');
+  p.textContent = text;
+  box.prepend(p);
+  // limit lines
+  while (box.children.length > 80) box.removeChild(box.lastChild);
+}
+
+function saveLogCSV(){
+  if (!logs.length) { alert('No logs'); return; }
+  const content = ['timestamp_ms,angle_deg,dist_cm,motion'].concat(logs).join('\n');
+  const blob = new Blob([content], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `radar_log_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ----------------------- Audio Beep ----------------------- */
+let audioCtx = null;
+function beepOnce(){
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 600;
+    g.gain.value = 0.0001;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.05, audioCtx.currentTime + 0.02);
+    setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12); o.stop(audioCtx.currentTime + 0.13); }, 100);
+  } catch(e){ console.warn('beep err', e); }
+}
+
+/* ----------------------- Canvas Radar Drawing ----------------------- */
+const canvas = el('radarCanvas');
+const ctx = canvas.getContext('2d');
+let W=0,H=0, cx=0, cy=0;
+function resizeCanvas(){
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  W = canvas.width; H = canvas.height;
+  cx = W/2; cy = H*0.78;
+}
+window.addEventListener('resize', ()=>{ resizeCanvas(); });
+resizeCanvas();
+
+function renderLoop(ts){
+  // update cfg from UI controls
+  cfg.maxRange = parseFloat(el('range').value);
+  cfg.sensitivity = parseFloat(el('sensitivity').value);
+  cfg.holdMs = parseFloat(el('hold').value) * 1000;
+  cfg.showDots = el('togDots').checked;
+  cfg.showLabels = el('togLabels').checked;
+  cfg.showTrail = el('togTrail').checked;
+  cfg.sound = el('togSound').checked;
+  cfg.autoLock = el('togLock').checked;
+  cfg.showSweepDir = el('togSweepDir').checked;
+  
+  // Update sweep mode
+  sweepMode = el('sweepMode').value;
+
+  el('lblRange').innerText = cfg.maxRange;
+  el('lblSens').innerText = cfg.sensitivity;
+  el('lblHold').innerText = Math.round(cfg.holdMs/1000);
+  el('uiRange').innerText = cfg.maxRange;
+  el('uiSens').innerText = cfg.sensitivity;
+
+  // clear
+  ctx.clearRect(0,0,W,H);
+
+  // background vignette
+  const g = ctx.createRadialGradient(cx*0.3, H*0.12, 10, cx, H*0.4, Math.max(W,H));
+  g.addColorStop(0, 'rgba(0,40,20,0.18)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  // radar plate
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // rings
+  const rings = 4;
+  const pxPerCm = Math.min(W, H) * 0.45 / (cfg.maxRange || 200);
+  for (let i=1;i<=rings;i++){
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(0,255,136,${0.08 + 0.05*i})`;
+    ctx.lineWidth = 1.2;
+    ctx.arc(0,0, (cfg.maxRange/rings*i)*pxPerCm, 0, Math.PI);
+    ctx.stroke();
+    // label ring
+    ctx.fillStyle = 'rgba(0,255,136,0.22)';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.round(cfg.maxRange/rings*i)+' cm', 0, - (cfg.maxRange/rings*i)*pxPerCm - 8);
+  }
+
+  // radial lines
+  ctx.lineWidth = 1;
+  for (let a=0;a<=180;a+=15){
+    const r = (cfg.maxRange) * pxPerCm;
+    const ax = r * Math.cos((a)*Math.PI/180);
+    const ay = -r * Math.sin((a)*Math.PI/180);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(0,255,136,0.06)';
+    ctx.moveTo(0,0); ctx.lineTo(ax,ay); ctx.stroke();
+  }
+
+  // center glow
+  for (let r=0;r<40;r+=6){
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(0,255,136,${0.08 - r*0.001})`;
+    ctx.arc(0,0, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // purge old detections
+  const nowMs = Date.now();
+  for (let i=detections.length-1;i>=0;i--){
+    if (nowMs - detections[i].ts > cfg.holdMs) detections.splice(i,1);
+  }
+
+  // Simulated sweep if not in real-time mode
+  if (sweepMode === 'simulated') {
+    // Update sweep angle for simulation
+    sweepAngle += 0.6 * sweepDirection;
+    
+    // Change direction at boundaries
+    if (sweepAngle >= 180) {
+      sweepAngle = 180;
+      sweepDirection = -1;
+    } else if (sweepAngle <= 0) {
+      sweepAngle = 0;
+      sweepDirection = 1;
+    }
+    
+    // Update sweep direction indicator
+    el('uiSweepDir').textContent = sweepDirection > 0 ? '→' : '←';
+  }
+
+  // draw trail (faint lines behind sweep)
+  if (cfg.showTrail){
+    const trailLength = sweepDirection > 0 ? 
+      Math.min(140, sweepAngle * 2) : 
+      Math.min(140, (180 - sweepAngle) * 2);
+    
+    for (let t=0;t<trailLength;t+=2){
+      const a = sweepDirection > 0 ? 
+        (sweepAngle - t*0.6) : 
+        (sweepAngle + t*0.6);
+      
+      if (a < 0 || a > 180) continue;
+      
+      const alpha = Math.max(0, 0.35 - t*0.0026);
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(0,255,136,${alpha})`;
+      ctx.lineWidth = Math.max(0.3, 2 - t*0.01);
+      const ax = (cfg.maxRange)*pxPerCm * Math.cos(a*Math.PI/180);
+      const ay = -(cfg.maxRange)*pxPerCm * Math.sin(a*Math.PI/180);
+      ctx.moveTo(0,0); ctx.lineTo(ax,ay); ctx.stroke();
+    }
+  }
+
+  // draw detections
+  let lock = null;
+  for (let d of detections){
+    const age = nowMs - d.ts;
+    const alpha = clamp(1 - (age / cfg.holdMs), 0, 1);
+    const px = d.dist * pxPerCm * Math.cos(d.angle*Math.PI/180);
+    const py = -d.dist * pxPerCm * Math.sin(d.angle*Math.PI/180);
+
+    if (d.motion){
+      const pulse = 1 + 0.35*Math.sin((nowMs - d.ts)*0.01);
+      ctx.fillStyle = `rgba(255,60,60,${alpha})`;
+      ctx.beginPath(); ctx.arc(px,py, 12*pulse, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = `rgba(255,60,60,${alpha*0.9})`;
+      ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(px,py, 22*pulse, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.fillStyle = `rgba(0,255,100,${alpha*0.85})`;
+      ctx.beginPath(); ctx.arc(px,py, 7, 0, Math.PI*2); ctx.fill();
+    }
+
+    if (cfg.showLabels){
+      ctx.fillStyle = `rgba(0,255,136,${alpha})`;
+      ctx.font = '12px monospace'; ctx.textAlign = 'left';
+      ctx.fillText(Math.round(d.dist) + ' cm', px + 10, py - 6);
+    }
+
+    // track lock target
+    if (!lock || d.dist < lock.dist) lock = d;
+  }
+
+  // draw sweep line with direction indicator
+  const srx = (cfg.maxRange*pxPerCm) * Math.cos(sweepAngle*Math.PI/180);
+  const sry = -(cfg.maxRange*pxPerCm) * Math.sin(sweepAngle*Math.PI/180);
+  
+  // Main sweep line
+  ctx.beginPath(); 
+  ctx.strokeStyle='rgba(0,255,136,0.98)'; 
+  ctx.lineWidth=3;
+  ctx.moveTo(0,0); 
+  ctx.lineTo(srx,sry); 
+  ctx.stroke();
+  
+  // Direction indicator at sweep tip
+  if (cfg.showSweepDir) {
+    const tipSize = 12;
+    const tipAngle = sweepDirection > 0 ? -Math.PI/4 : Math.PI/4;
+    const tipX = srx + tipSize * Math.cos(sweepAngle*Math.PI/180 + tipAngle);
+    const tipY = sry + tipSize * Math.sin(sweepAngle*Math.PI/180 + tipAngle);
+    
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 2;
+    ctx.moveTo(srx, sry);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+  }
+
+  // highlight lock
+  if (cfg.autoLock && lock){
+    ctx.strokeStyle = 'rgba(255,200,0,0.95)'; ctx.lineWidth=2.6;
+    const lx = lock.dist * pxPerCm * Math.cos(lock.angle*Math.PI/180);
+    const ly = -lock.dist * pxPerCm * Math.sin(lock.angle*Math.PI/180);
+    ctx.beginPath(); ctx.arc(lx,ly,34,0,Math.PI*2); ctx.stroke();
+    // text in bottom overlay set externally
+    el('lockInfo').textContent = 'LOCK: ' + Math.round(lock.dist) + ' cm @ ' + Math.round(lock.angle) + '°';
+  } else {
+    el('lockInfo').textContent = 'LOCK: —';
+  }
+
+  ctx.restore();
+
+  // update UI counts
+  el('uiCount').innerText = detections.length;
+
+  requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
+
+/* ----------------------- Controls wiring ----------------------- */
+el('requestPort').addEventListener('click', requestPort);
+el('btnConnect').addEventListener('click', async ()=>{
+  if (!isConnected) {
+    await connectToSelected();
+  } else {
+    el('status').innerText = 'Already connected';
+  }
+  await listSavedPorts();
+});
+el('btnDisconnect').addEventListener('click', async ()=>{ await disconnectPort(); await listSavedPorts(); });
+el('btnPause').addEventListener('click', ()=>{ paused = !paused; el('btnPause').textContent = paused ? 'Resume' : 'Pause'; });
+el('btnClear').addEventListener('click', ()=>{ detections=[]; logs=[]; el('logBox').innerHTML=''; });
+el('btnSave').addEventListener('click', saveLogCSV);
+el('btnFS').addEventListener('click', ()=>{ if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); });
+
+el('range').addEventListener('input', ()=>{ el('lblRange').innerText = el('range').value; });
+el('sensitivity').addEventListener('input', ()=>{ el('lblSens').innerText = el('sensitivity').value; });
+el('hold').addEventListener('input', ()=>{ el('lblHold').innerText = el('hold').value; });
+
+el('togDots').addEventListener('change', ()=>{ cfg.showDots = el('togDots').checked; });
+el('togLabels').addEventListener('change', ()=>{ cfg.showLabels = el('togLabels').checked; });
+el('togTrail').addEventListener('change', ()=>{ cfg.showTrail = el('togTrail').checked; });
+el('togSound').addEventListener('change', ()=>{ cfg.sound = el('togSound').checked; });
+el('togLock').addEventListener('change', ()=>{ cfg.autoLock = el('togLock').checked; });
+el('togSweepDir').addEventListener('change', ()=>{ cfg.showSweepDir = el('togSweepDir').checked; });
+
+/* initialize saved ports list */
+listSavedPorts();
+
+/* simple auto-detect helper for environments without getPorts showing items
+   user still must use Request Port to get permission in browser. */
+el('portList').addEventListener('dblclick', ()=>{ requestPort(); });
+
+/* ----------------------- Fallback messages ----------------------- */
+if (!('serial' in navigator)) {
+  el('status').innerText = 'Web Serial API not available. Use Chrome/Edge and enable experimental features.';
+  // keep UI but warn user
+}
+
+/* ------------- End of file ------------- */
+</script>
+</body>
+</html>
